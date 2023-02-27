@@ -13,3 +13,9 @@
 1. points. 3 for a win, 1 for a draw, 0 for a loss
 2. Oppscore?
 3. ...
+
+
+### Badness
+is a means to measure how bad a table paring is regarding seeing the same person multiple times.
+A player has a personal current badness, which is the sum of players he would play against this round that he already faced.
+Table Badness is the sum of all player badnesses. Facing the same opponent more than 2 times could scale more heavily (**2) ?

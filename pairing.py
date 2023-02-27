@@ -5,9 +5,11 @@ import pandas as pd
 
 
 class TournamentOrganizer:
-    def __init__(self, players) -> None:
+    def __init__(self, players, printing=True) -> None:
         self.players = players
         self.number_of_players = len(players)
+
+        self.printing = printing
 
         # points
         self.p_win = 3
@@ -23,7 +25,7 @@ class TournamentOrganizer:
         players = x*4 + y*3
         tables = x + y
         """
-        n4 = int(self.number_of_players - 3 * self.number_of_rounds)
+        n4 = int(self.number_of_players - 3 * self.number_of_tables)
         n3 = int(self.number_of_tables - n4)
 
         self.table_layout = np.array(np.hstack((4 * np.ones(n4), 3 * np.ones(n3))), dtype=int)
@@ -41,34 +43,47 @@ class TournamentOrganizer:
 
         self.standings.sort(key=get_player_score, reverse=True)
         # print result
-        print(yellow(f"Standings"))
-        for p in self.standings:
-            p.print_player()
+        if self.printing:
+            print(yellow(f"Standings"))
+            for p in self.standings:
+                p.print_player()
 
     def calc_pairings(self):
-        # pair from top to bottom, first against next best 3 and so on
         self.tables = []
-        index = 0
-        for t in self.table_layout:
-            self.tables.append(self.standings[index : index + t])
-            index += t
+        # Variante 1
+        # pair from top to bottom, first against next best 3 and so on (very basic)
+        # index = 0
+        # for n in self.table_layout:
+        #     self.tables.append(self.standings[index : index + n])
+        #     index += n
 
-        # print result
-        print(yellow(f"Pairings"))
+        # Variante 2
+        open_players = self.standings.copy()
+        for n in self.table_layout:
+            table = []
+            # select the n best suited players for this table
+            for i in range(n):
+                if len(table) == 0:
+                    table.append(open_players.pop(0))
+                else:
+                    next_player = self.get_best_next_player(table, open_players)
+                    table.append(next_player)
+                    open_players.remove(next_player)
+            self.tables.append(table)
+
+        # calc player badness
         for i, t in enumerate(self.tables):
-            # print(bright(f"Table {i}"))
             for p in t:
-                # p.print_player()
                 badness = 0
-                if len(p.opponents) > 0:
-                    for op in flatten(p.opponents):
-                        if op in t:
-                            badness += 1
-                # print(f"  badness: {badness}")
+                for current_op in t:
+                    badness += flatten(p.opponents).count(current_op) ** 2
                 p.current_badness = badness
                 p.badness_sum += badness
 
-        print(self.pairings_to_dataframe())
+        # print result
+        if self.printing:
+            print(yellow(f"Pairings"))
+            print(self.pairings_to_dataframe())
 
         # safe opponents of players
         for t in self.tables:
@@ -80,19 +95,40 @@ class TournamentOrganizer:
         self.old_pairings.append(self.tables)
 
     def set_results(self):
+        winners = []
+        drawers = []
         for t in self.tables:
             # draw
             if np.random.rand() > 0.8:
                 for p in t:
                     p.score += self.p_draw
+                    drawers.append(p.name)
             # win
             else:
-                np.random.choice(t).score += self.p_win
+                winner = np.random.choice(t)
+                winner.score += self.p_win
+                winners.append(winner.name)
+        # df = self.pairings_to_dataframe()
+        # def color_by_res(entry):
+        #     try:
+        #         if entry[0] in winners:
+        #             return bgreen(entry)
+        #         elif entry[0] in drawers:
+        #             return bblue(entry)
+        #         else:
+        #             return entry
+        #     except TypeError:
+        #         return entry
+
+        # df = df.applymap(color_by_res)
+        # if self.printing:
+        #     print(df)
 
     def pairings_to_dataframe(self):
         df = pd.DataFrame(self.tables).T
         df.columns = [f"Table {i}" for i in range(self.number_of_tables)]
 
+        # replace player object with name and data
         def pretty(player):
             if player is not None:
                 return [player.name, player.score, player.current_badness]
@@ -100,12 +136,33 @@ class TournamentOrganizer:
                 return player
 
         df = df.applymap(pretty)
+
+        # add row for badness of table
         table_badness = np.zeros(self.number_of_tables)
         for i, t in enumerate(self.tables):
             for p in t:
                 table_badness[i] += p.current_badness
-
         df.loc[len(df.index)] = table_badness
 
-        df.index = ["Player 1", "Player 2", "Player 3", "Player 4", "Table Badness"]
+        # add row for total table score (see if strong players play eachother)
+        table_score = np.zeros(self.number_of_tables)
+        for i, t in enumerate(self.tables):
+            for p in t:
+                table_score[i] += p.score
+        df.loc[len(df.index)] = table_score
+
+        df.index = ["Player 1", "Player 2", "Player 3", "Player 4", "Table Badness", "Table Score"]
         return df
+
+    def calc_badness_single_player(self, seated_players: list, possible_player: Player):
+        badness = 0
+        for p in seated_players:
+            badness += flatten(p.opponents).count(possible_player) ** 2
+            # square to prevent seeing the same op 3x or more
+        return badness
+
+    def get_best_next_player(self, seated_players: list, possible_players: list):
+        badness_list = np.zeros_like(possible_players)
+        for i, possible_player in enumerate(possible_players):
+            badness_list[i] = self.calc_badness_single_player(seated_players, possible_player)
+        return possible_players[np.argmin(badness_list)]

@@ -14,6 +14,10 @@ def bred(txt):
     return f"{Fore.RED}{Style.BRIGHT}{txt}{Style.RESET_ALL}"
 
 
+def bblue(txt):
+    return f"{Fore.BLUE}{Style.BRIGHT}{txt}{Style.RESET_ALL}"
+
+
 def yellow(txt):
     return f"{Fore.YELLOW}{txt}{Style.RESET_ALL}"
 
