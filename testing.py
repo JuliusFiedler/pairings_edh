@@ -1,6 +1,6 @@
 import numpy as np
 
-from pairing import TournamentOrganizer
+from tournament_organizer import TournamentOrganizer
 from player import Player
 
 ### --- Parameters --- ###

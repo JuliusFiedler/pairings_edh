@@ -36,17 +36,23 @@ class TournamentOrganizer:
         np.random.shuffle(self.standings)
 
     def calc_standings(self):
+        # sort players by points
         self.standings = list(np.copy(self.players))
 
         def get_player_score(player: Player):
             return player.get_score()
 
         self.standings.sort(key=get_player_score, reverse=True)
+
         # print result
         if self.printing:
             print(yellow(f"Standings"))
             for p in self.standings:
                 p.print_player()
+
+    def calc_final_standings(self):
+        # TODO incorporate tiebreaker
+        raise NotImplementedError
 
     def calc_pairings(self):
         self.tables = []
@@ -65,8 +71,10 @@ class TournamentOrganizer:
             table = []
             # select the n best suited players for this table
             for i in range(n):
+                # table is empty, take first placed player
                 if len(table) == 0:
                     table.append(open_players.pop(0))
+                # search for least badness among open players
                 else:
                     next_player = self.get_best_next_player(table, open_players)
                     table.append(next_player)
@@ -132,6 +140,7 @@ class TournamentOrganizer:
         #     print(df)
 
     def pairings_to_dataframe(self):
+        # compact visualization of the pairing tables
         df = pd.DataFrame(self.tables).T
         df.columns = [f"Table {i}" for i in range(self.number_of_tables)]
 
@@ -145,17 +154,14 @@ class TournamentOrganizer:
         df = df.applymap(pretty)
 
         # add row for badness of table
-        table_badness = np.zeros(self.number_of_tables)
-        for i, t in enumerate(self.tables):
-            for p in t:
-                table_badness[i] += p.current_badness
-        df.loc[len(df.index)] = table_badness
-
         # add row for total table score (see if strong players play eachother)
+        table_badness = np.zeros(self.number_of_tables)
         table_score = np.zeros(self.number_of_tables)
         for i, t in enumerate(self.tables):
             for p in t:
+                table_badness[i] += p.current_badness
                 table_score[i] += p.score
+        df.loc[len(df.index)] = table_badness
         df.loc[len(df.index)] = table_score
 
         df.index = ["Player 1", "Player 2", "Player 3", "Player 4", "Table Badness", "Table Score"]
@@ -169,7 +175,12 @@ class TournamentOrganizer:
         return badness
 
     def get_best_next_player(self, seated_players: list, possible_players: list):
+        # compare all open players w.r.t. their badness and select the best option
         badness_list = np.zeros_like(possible_players)
         for i, possible_player in enumerate(possible_players):
             badness_list[i] = self.calc_badness_single_player(seated_players, possible_player)
-        return possible_players[np.argmin(badness_list)]
+
+        # argmin selects the first occurance if multiple occur, prioritizing the highest rated player
+        best_player = possible_players[np.argmin(badness_list)]
+
+        return best_player 

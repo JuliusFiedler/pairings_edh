@@ -1,4 +1,7 @@
 # pairing script for cEDH tournaments
+## Installation:
+- run `pip install -r requirements.txt`
+
 ## Philosophy
 - Use as many elements off the classicla swiss pairing system as possible
 - Have a robust tiebreaker system
