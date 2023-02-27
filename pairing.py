@@ -58,6 +58,8 @@ class TournamentOrganizer:
         #     index += n
 
         # Variante 2
+        # pair from the top, but select the player with the least badness for the next open spot
+        # on the table
         open_players = self.standings.copy()
         for n in self.table_layout:
             table = []
@@ -70,6 +72,11 @@ class TournamentOrganizer:
                     table.append(next_player)
                     open_players.remove(next_player)
             self.tables.append(table)
+
+        # Variante 3
+        # start pairing with the person with the highest badness sum so far and minimize
+        # their badness
+        # TODO ?
 
         # calc player badness
         for i, t in enumerate(self.tables):

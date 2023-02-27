@@ -15,18 +15,27 @@
 3. ...
 
 
-### Badness
+## Badness
 is a means to measure how bad a table paring is, regarding seeing the same person multiple times.
 A player has a personal current badness, which is the sum of players he would play against this round that he already faced in the tournament.
 Table Badness is the sum of all player badnesses. Facing the same opponent more than 2 times could scale more heavily.
 - same op twice: badness 1
 - same op thrice: badness 4
 - same op four times: badness 9
+
 This obviously scales per player. Meaning a total average badness at the end of the tournament of 1 means each player, on average
 did see a single other player twice in a single round, all other pairings were with new players.
+
+## Current Usage (Development Stage)
+- Run `main.py` to test a tournament, inspect pairings and standings
+- Run `testing.py` for large scale testing (various player numbers, many random results)
+
+## Open Questions
+- How many player do we need before a cut to top 4 is no longer sensible? > 16?
 
 ## TODOS
 - Validate pairing system, badness, etc.
 - Build unittest?
 - Track Oppscore and other tiebreakers
 - implement user interface (names, results)
+
