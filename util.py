@@ -1,6 +1,7 @@
 import os
 from colorama import Style, Fore
 
+
 def bright(txt):
     return f"{Style.BRIGHT}{txt}{Style.RESET_ALL}"
 
@@ -15,3 +16,7 @@ def bred(txt):
 
 def yellow(txt):
     return f"{Fore.YELLOW}{txt}{Style.RESET_ALL}"
+
+
+def flatten(l):
+    return [item for sublist in l for item in sublist]
