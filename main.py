@@ -10,7 +10,7 @@ number_of_players = 13
 
 ### --------------------------------------------- ###
 
-np.random.seed(1) # for reproducibility
+np.random.seed(1)  # for reproducibility
 
 players = [Player() for i in range(number_of_players)]
 
@@ -20,5 +20,7 @@ for i in range(TO.number_of_rounds):
     TO.calc_pairings()
     TO.set_results()
     TO.calc_standings()
+
+TO.calc_final_standings()
 
 # IPS()

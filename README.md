@@ -14,9 +14,13 @@
 
 ## Player Rating / Tiebreaker
 1. points. 3 for a win, 1 for a draw, 0 for a loss
-2. Oppscore?
-3. ...
+1. OMW% (this is also tricky, since we have multiple opponents and also not always the same amount each round -> average?)
+1. (GW% and OGW% are useless in our case)
+1. Seating Order on the Table?
 
+https://www.mtgevent.com/blog/magic-the-gathering-tiebreakers-explained/
+
+https://help.battlefy.com/en/articles/3367583-swiss-tie-breaker-formats
 
 ## Badness
 is a means to measure how bad a table paring is, regarding seeing the same person multiple times.
@@ -42,3 +46,5 @@ did see a single other player twice in a single round, all other pairings were w
 - Track Oppscore and other tiebreakers
 - implement user interface (names, results)
 
+## Contributing
+If you submit code, please note that this project uses automatic code formatting with the tool [black](https://github.com/psf/black), more precisely: `black -l 120 .`.

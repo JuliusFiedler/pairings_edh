@@ -35,6 +35,12 @@ class TournamentOrganizer:
         self.standings = list(np.copy(self.players))
         np.random.shuffle(self.standings)
 
+        self.say_hello_to_players()
+
+    def say_hello_to_players(self):
+        for p in self.players:
+            p.TO = self
+
     def calc_standings(self):
         # sort players by points
         self.standings = list(np.copy(self.players))
@@ -45,14 +51,33 @@ class TournamentOrganizer:
         self.standings.sort(key=get_player_score, reverse=True)
 
         # print result
-        if self.printing:
-            print(yellow(f"Standings"))
-            for p in self.standings:
-                p.print_player()
+        self.print_standings()
 
     def calc_final_standings(self):
-        # TODO incorporate tiebreaker
-        raise NotImplementedError
+        def get_tiebreaker_score(player: Player):
+            numerical_key = 0
+            # 1. sort by score
+            numerical_key += player.get_score()
+            # 2. add first tiebreaker
+            numerical_key += player.get_OMWP()  # 0.33 < OMWP <= 1
+            # 3. add second tiebreaker
+            numerical_key += (
+                player.total_seating_number * 1e-3
+            )  # make sure this is always smaller than first tiebreaker
+
+            return numerical_key
+
+        self.standings.sort(key=get_tiebreaker_score, reverse=True)
+
+        self.print_standings(show_tiebreakers=True)
+
+    def print_standings(self, show_tiebreakers=False):
+        if self.printing:
+            print(yellow(f"Standings"))
+            for i, p in enumerate(self.standings):
+                p: Player
+                row_template = "{:<2} {}"
+                print(row_template.format(i + 1, p.get_player_info(show_tiebreakers=show_tiebreakers)))
 
     def calc_pairings(self):
         self.tables = []
@@ -79,6 +104,9 @@ class TournamentOrganizer:
                     next_player = self.get_best_next_player(table, open_players)
                     table.append(next_player)
                     open_players.remove(next_player)
+
+            # randomize seating
+            np.random.shuffle(table)
             self.tables.append(table)
 
         # Variante 3
@@ -86,14 +114,18 @@ class TournamentOrganizer:
         # their badness
         # TODO ?
 
-        # calc player badness
+        # calc player badness and track player seatings
         for i, t in enumerate(self.tables):
-            for p in t:
+            for pos, p in enumerate(t):
+                p: Player
                 badness = 0
                 for current_op in t:
                     badness += flatten(p.opponents).count(current_op) ** 2
                 p.current_badness = badness
                 p.badness_sum += badness
+
+                p.total_seating_number += pos + 1  # +1 in order to have positions 1 to 4 for the plebs
+                # TODO is this only relevant if you win?
 
         # print result
         if self.printing:
@@ -110,6 +142,12 @@ class TournamentOrganizer:
         self.old_pairings.append(self.tables)
 
     def set_results(self):
+        # turn up the round counter for each player
+        for p in self.players:
+            p: Player
+            p.rounds_palyed += 1
+
+        # random results for testing
         winners = []
         drawers = []
         for t in self.tables:
@@ -183,4 +221,4 @@ class TournamentOrganizer:
         # argmin selects the first occurance if multiple occur, prioritizing the highest rated player
         best_player = possible_players[np.argmin(badness_list)]
 
-        return best_player 
+        return best_player

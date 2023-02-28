@@ -10,6 +10,7 @@ runs_per_player_number = 30
 for number_of_players in range(*players_range, 1):
     badness_sum = 0
     clean_cut_sum = 0
+    score_to_top_4_sum = 0
     for i in range(runs_per_player_number):
         players = [Player() for i in range(number_of_players)]
 
@@ -30,11 +31,17 @@ for number_of_players in range(*players_range, 1):
         # clean cut to top 4?
         if TO.standings[3].score > TO.standings[4].score:
             clean_cut_sum += 1
-    row_template = "Players {:<3}, Av. Badness {:<4},  Clean cut %: {:<4}  "
+
+        # score needed to top 4 (make sure all well placed players are in)
+        score_to_top_4_sum += TO.standings[3].score
+
+    row_template = "Players: {:<3}   Av. Badness: {:<4}   Clean cut %: {:<5}   av. worst Score to top: {:<4} / {:<3}"
     print(
         row_template.format(
             number_of_players,
             round(badness_sum / runs_per_player_number, 2),
             round(clean_cut_sum / runs_per_player_number * 100, 2),
+            round(score_to_top_4_sum / runs_per_player_number, 2),
+            TO.number_of_rounds * TO.p_win,
         )
     )
