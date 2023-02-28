@@ -11,7 +11,7 @@ number_of_players = 12
 
 ### --------------------------------------------- ###
 
-np.random.seed(9)  # for reproducibility
+np.random.seed(19)  # for reproducibility
 
 players = [Player() for i in range(number_of_players)]
 

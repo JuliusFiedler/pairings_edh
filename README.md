@@ -47,7 +47,9 @@ did see a single other player twice in a single round, all other pairings were w
 - implement user interface (names, results)
 
 ### Prblems
-- sometimes very high badness still occurs with variante 2, (eg. 12 palyers, seed 9)
+- sometimes very high badness still occurs with variante 2, (eg. 12 palyers, seed 19)
+- possible pitfall: registration order might matter, since players of equal score are not shuffled during the swiss when deciding their seeting,
+thus the first eligible player is taken
 
 ## Contributing
 If you submit code, please note that this project uses automatic code formatting with the tool [black](https://github.com/psf/black), more precisely: `black -l 120 .`.

@@ -46,6 +46,9 @@ class TournamentOrganizer:
     def calc_standings(self):
         # sort players by points
         self.standings = list(np.copy(self.players))
+        # we shuffle the standings before sorting to prevent registration order mattering
+        # TODO: this assumes, that during the swiss only scores matter, and no tiebreakers are used.
+        np.random.shuffle(self.standings)
 
         def get_player_score(player: Player):
             return player.get_score()
@@ -57,17 +60,11 @@ class TournamentOrganizer:
 
     def calc_final_standings(self):
         def get_tiebreaker_score(player: Player):
-            numerical_key = 0
             # 1. sort by score
-            numerical_key += player.get_score()
             # 2. add first tiebreaker
-            numerical_key += player.get_OMWP()  # 0.33 < OMWP <= 1
             # 3. add second tiebreaker
-            numerical_key += (
-                player.total_seating_number * 1e-3
-            )  # make sure this is always smaller than first tiebreaker
 
-            return numerical_key
+            return player.get_score(), player.get_OMWP(), player.total_seating_number
 
         self.standings.sort(key=get_tiebreaker_score, reverse=True)
 
@@ -75,7 +72,7 @@ class TournamentOrganizer:
 
     def print_standings(self, show_tiebreakers=False):
         if self.printing:
-            print(yellow(f"Standings after Round {self.round -1}"))
+            print(yellow(f"\nStandings after Round {self.round -1}"))
             for i, p in enumerate(self.standings):
                 p: Player
                 player_stats = p.get_player_stats()
@@ -86,7 +83,7 @@ class TournamentOrganizer:
                     player_stats[-1] = bmagenta(player_stats[-1])
 
                 if show_tiebreakers:
-                    row_template = "{:<2} {:<15} Score {:<2}  OMWP: {:<5}  TSN: {:<2}  Badness Sum: {:<2}"
+                    row_template = "{:<2} {:<15} Score {:<2}  OMWP: {:<6}  TSN: {:<2}  Badness Sum: {:<2}"
                 else:
                     row_template = "{:<2} {:<15} Score {:<2}  Badness Sum: {:<2}"
                     del player_stats[2:4]
@@ -94,7 +91,7 @@ class TournamentOrganizer:
                     print("--------------------------------")
                 print(row_template.format(i + 1, *player_stats))
 
-    def calc_pairings(self, v=2):
+    def calc_pairings(self, v=4):
         self.tables = []
         # Variante 1
         # pair from top to bottom, first against next best 3 and so on (very basic)
@@ -107,7 +104,7 @@ class TournamentOrganizer:
         # Variante 2
         # pair from the top, but select the player with the least badness for the next open spot
         # on the table
-        if v == 2:
+        elif v == 2:
             open_players = self.standings.copy()
             for n in self.table_layout:
                 table = []
@@ -129,7 +126,7 @@ class TournamentOrganizer:
         # Variante 3
         # start pairing with the person with the highest badness sum so far and minimize
         # their badness
-        if v == 3:
+        elif v == 3:
             open_players = self.standings.copy()
             for n in self.table_layout:
                 table = []
@@ -143,6 +140,36 @@ class TournamentOrganizer:
                             if p.badness_sum > badest_badness:
                                 badest_badness = p.badness_sum
                                 selected_player = p
+                        table.append(selected_player)
+                        open_players.remove(selected_player)
+                    # search for least badness among open players
+                    else:
+                        next_player = self.get_best_next_player(table, open_players)
+                        table.append(next_player)
+                        open_players.remove(next_player)
+
+                # randomize seating
+                np.random.shuffle(table)
+                self.tables.append(table)
+        # Variante 4
+        # combination of 2 and 3: select first player from among thos with the highest score, but take the badest
+        elif v == 4:
+            open_players = self.standings.copy()
+            for n in self.table_layout:
+                table = []
+                # select the n best suited players for this table
+                for i in range(n):
+                    # empty table: look for hight score players, take the one with highest badness
+                    if len(table) == 0:
+                        best_score = open_players[0].get_score()
+                        badest_badness = 0
+                        selected_player = open_players[0]
+                        for p in open_players:
+                            if p.get_score() == best_score and p.badness_sum > badest_badness:
+                                badest_badness = p.badness_sum
+                                selected_player = p
+                            elif p.get_score() < best_score:
+                                break
                         table.append(selected_player)
                         open_players.remove(selected_player)
                     # search for least badness among open players
@@ -170,7 +197,7 @@ class TournamentOrganizer:
 
         # print result
         if self.printing:
-            print(yellow(f"Pairings for Round {self.round}"))
+            print(yellow(f"\nPairings for Round {self.round}"))
             print(self.pairings_to_dataframe())
 
         # safe opponents of players
@@ -181,6 +208,9 @@ class TournamentOrganizer:
                 p.add_opponents(ops)
 
         self.old_pairings.append(self.tables)
+
+    def evaluate_pairings(self):
+        pass
 
     def set_results(self):
         # turn up the round counter
@@ -270,6 +300,13 @@ class TournamentOrganizer:
         for i in range(self.number_of_rounds):
             self.calc_pairings()
             self.set_results()
-            self.calc_standings()
+            # skip standing after last round
+            if i + 1 < self.number_of_rounds:
+                self.calc_standings()
 
         self.calc_final_standings()
+        s = 0
+        for p in self.players:
+            s += p.badness_sum
+        if self.printing:
+            print(f"\nav. player badness sum: {s / self.number_of_players}")
