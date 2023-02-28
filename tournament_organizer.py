@@ -15,6 +15,10 @@ class TournamentOrganizer:
         self.p_win = 3
         self.p_draw = 1
 
+        # weights for evaluation
+        self.weight_badness = 1
+        self.weight_variance = 1
+
         # players
         assert self.number_of_players > 5, "too few players, tournament is canceled"
 
@@ -210,7 +214,18 @@ class TournamentOrganizer:
         self.old_pairings.append(self.tables)
 
     def evaluate_pairings(self):
-        pass
+        table_badness = np.zeros(self.number_of_tables)
+        table_variances = np.zeros(self.number_of_tables)
+        for i, t in enumerate(self.tables):
+            table_scores = []
+            for p in t:
+                table_badness[i] += p.current_badness
+                table_scores.append(p.get_score())
+            table_variances[i] = np.var(table_scores)
+
+        J = self.weight_badness * sum(table_badness) + self.weight_variance * sum(table_variances)
+
+        return J
 
     def set_results(self):
         # turn up the round counter
@@ -266,16 +281,18 @@ class TournamentOrganizer:
         # add row for badness of table
         # add row for total table score (see if strong players play eachother)
         table_badness = np.zeros(self.number_of_tables)
-        table_score = np.zeros(self.number_of_tables)
+        table_variances = np.zeros(self.number_of_tables)
         for i, t in enumerate(self.tables):
+            table_scores = []
             for p in t:
                 table_badness[i] += p.current_badness
-                table_score[i] += p.score
+                table_scores.append(p.get_score())
+            table_variances[i] = np.var(table_scores)
         df.loc[len(df.index)] = table_badness
-        df.loc[len(df.index)] = table_score
+        df.loc[len(df.index)] = table_variances
 
         # df.index = ["Player 1", "Player 2", "Player 3", "Player 4", "Table Badness", "Table Score"]
-        df.index = [*[f"Player {i+1}" for i in range(max(self.table_layout))], "Table Badness", "Table Score"]
+        df.index = [*[f"Player {i+1}" for i in range(max(self.table_layout))], "Table Badness", "Tab. Sc. Var."]
         return df
 
     def calc_badness_single_player(self, seated_players: list, possible_player: Player):
