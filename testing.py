@@ -11,15 +11,13 @@ for number_of_players in range(*players_range, 1):
     badness_sum = 0
     clean_cut_sum = 0
     score_to_top_4_sum = 0
+    number_badly_paired_player_sum = 0
+    number_really_badly_paired_player_sum = 0
     for i in range(runs_per_player_number):
         players = [Player() for i in range(number_of_players)]
 
         TO = TournamentOrganizer(players, printing=False)
-
-        for i in range(TO.number_of_rounds):
-            TO.calc_pairings()
-            TO.set_results()
-            TO.calc_standings()
+        TO.simulate_tournament()
 
         # average pairing badness per player
         average_player_badness = 0
@@ -35,7 +33,21 @@ for number_of_players in range(*players_range, 1):
         # score needed to top 4 (make sure all well placed players are in)
         score_to_top_4_sum += TO.standings[3].score
 
-    row_template = "Players: {:<3}   Av. Badness: {:<4}   Clean cut %: {:<5}   av. worst Score to top: {:<4} / {:<3}"
+        # look at worst pairings
+        badness_list = []
+        for p in TO.players:
+            badness_list.append(p.badness_sum)
+        number_badly_paired_player_sum += sum(np.where(np.array(badness_list) >= 5, 1, 0))
+        number_really_badly_paired_player_sum += sum(np.where(np.array(badness_list) >= 14, 1, 0))
+
+    row_template = (
+        "Players: {:<3}   "
+        + "Av. Badness: {:<4}   "
+        + "Clean cut %: {:<5}   "
+        + "av. worst Score to top: {:<4} / {:<3}   "
+        + "badly paired players: {:<4}   "
+        + "worse paired players: {:<4}"
+    )
     print(
         row_template.format(
             number_of_players,
@@ -43,5 +55,7 @@ for number_of_players in range(*players_range, 1):
             round(clean_cut_sum / runs_per_player_number * 100, 2),
             round(score_to_top_4_sum / runs_per_player_number, 2),
             TO.number_of_rounds * TO.p_win,
+            round(number_badly_paired_player_sum / runs_per_player_number, 2),
+            round(number_really_badly_paired_player_sum / runs_per_player_number, 2),
         )
     )

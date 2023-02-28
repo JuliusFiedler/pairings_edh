@@ -25,7 +25,8 @@ class Player:
     def get_score(self):
         return self.score
 
-    def get_player_info(self, show_tiebreakers=False):
+    def get_player_stats(self):
+        return [self.name, self.score, round(self.get_OMWP(), 2), self.total_seating_number, self.badness_sum]
         if not show_tiebreakers:
             row_template = "{:<15} Score {:<2}  Badness Sum: {}  "
             s = row_template.format(self.name, self.score, self.badness_sum)

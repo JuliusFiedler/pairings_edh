@@ -14,6 +14,10 @@ def bred(txt):
     return f"{Fore.RED}{Style.BRIGHT}{txt}{Style.RESET_ALL}"
 
 
+def bmagenta(txt):
+    return f"{Fore.MAGENTA}{Style.BRIGHT}{txt}{Style.RESET_ALL}"
+
+
 def bblue(txt):
     return f"{Fore.BLUE}{Style.BRIGHT}{txt}{Style.RESET_ALL}"
 
@@ -24,3 +28,12 @@ def yellow(txt):
 
 def flatten(l):
     return [item for sublist in l for item in sublist]
+
+
+def namify_player_list(plist):
+    if isinstance(plist, list):
+        for i, p in enumerate(plist):
+            plist[i] = namify_player_list(p)
+    else:
+        plist = plist.name
+    return plist

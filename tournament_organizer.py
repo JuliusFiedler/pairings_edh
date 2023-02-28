@@ -35,6 +35,8 @@ class TournamentOrganizer:
         self.standings = list(np.copy(self.players))
         np.random.shuffle(self.standings)
 
+        self.round = 1
+
         self.say_hello_to_players()
 
     def say_hello_to_players(self):
@@ -73,46 +75,85 @@ class TournamentOrganizer:
 
     def print_standings(self, show_tiebreakers=False):
         if self.printing:
-            print(yellow(f"Standings"))
+            print(yellow(f"Standings after Round {self.round -1}"))
             for i, p in enumerate(self.standings):
                 p: Player
-                row_template = "{:<2} {}"
-                print(row_template.format(i + 1, p.get_player_info(show_tiebreakers=show_tiebreakers)))
+                player_stats = p.get_player_stats()
+                # color high badness
+                if player_stats[-1] >= 10:
+                    player_stats[-1] = bred(player_stats[-1])
+                elif player_stats[-1] >= 5:
+                    player_stats[-1] = bmagenta(player_stats[-1])
 
-    def calc_pairings(self):
+                if show_tiebreakers:
+                    row_template = "{:<2} {:<15} Score {:<2}  OMWP: {:<5}  TSN: {:<2}  Badness Sum: {:<2}"
+                else:
+                    row_template = "{:<2} {:<15} Score {:<2}  Badness Sum: {:<2}"
+                    del player_stats[2:4]
+                if i == 4 and show_tiebreakers:
+                    print("--------------------------------")
+                print(row_template.format(i + 1, *player_stats))
+
+    def calc_pairings(self, v=2):
         self.tables = []
         # Variante 1
         # pair from top to bottom, first against next best 3 and so on (very basic)
-        # index = 0
-        # for n in self.table_layout:
-        #     self.tables.append(self.standings[index : index + n])
-        #     index += n
+        if v == 1:
+            index = 0
+            for n in self.table_layout:
+                self.tables.append(self.standings[index : index + n])
+                index += n
 
         # Variante 2
         # pair from the top, but select the player with the least badness for the next open spot
         # on the table
-        open_players = self.standings.copy()
-        for n in self.table_layout:
-            table = []
-            # select the n best suited players for this table
-            for i in range(n):
-                # table is empty, take first placed player
-                if len(table) == 0:
-                    table.append(open_players.pop(0))
-                # search for least badness among open players
-                else:
-                    next_player = self.get_best_next_player(table, open_players)
-                    table.append(next_player)
-                    open_players.remove(next_player)
+        if v == 2:
+            open_players = self.standings.copy()
+            for n in self.table_layout:
+                table = []
+                # select the n best suited players for this table
+                for i in range(n):
+                    # table is empty, take first placed player
+                    if len(table) == 0:
+                        table.append(open_players.pop(0))
+                    # search for least badness among open players
+                    else:
+                        next_player = self.get_best_next_player(table, open_players)
+                        table.append(next_player)
+                        open_players.remove(next_player)
 
-            # randomize seating
-            np.random.shuffle(table)
-            self.tables.append(table)
+                # randomize seating
+                np.random.shuffle(table)
+                self.tables.append(table)
 
         # Variante 3
         # start pairing with the person with the highest badness sum so far and minimize
         # their badness
-        # TODO ?
+        if v == 3:
+            open_players = self.standings.copy()
+            for n in self.table_layout:
+                table = []
+                # select the n best suited players for this table
+                for i in range(n):
+                    # table is empty, take player with highest badness so far
+                    if len(table) == 0:
+                        badest_badness = 0
+                        selected_player = open_players[0]
+                        for p in open_players:
+                            if p.badness_sum > badest_badness:
+                                badest_badness = p.badness_sum
+                                selected_player = p
+                        table.append(selected_player)
+                        open_players.remove(selected_player)
+                    # search for least badness among open players
+                    else:
+                        next_player = self.get_best_next_player(table, open_players)
+                        table.append(next_player)
+                        open_players.remove(next_player)
+
+                # randomize seating
+                np.random.shuffle(table)
+                self.tables.append(table)
 
         # calc player badness and track player seatings
         for i, t in enumerate(self.tables):
@@ -129,7 +170,7 @@ class TournamentOrganizer:
 
         # print result
         if self.printing:
-            print(yellow(f"Pairings"))
+            print(yellow(f"Pairings for Round {self.round}"))
             print(self.pairings_to_dataframe())
 
         # safe opponents of players
@@ -142,7 +183,8 @@ class TournamentOrganizer:
         self.old_pairings.append(self.tables)
 
     def set_results(self):
-        # turn up the round counter for each player
+        # turn up the round counter
+        self.round += 1
         for p in self.players:
             p: Player
             p.rounds_palyed += 1
@@ -180,7 +222,7 @@ class TournamentOrganizer:
     def pairings_to_dataframe(self):
         # compact visualization of the pairing tables
         df = pd.DataFrame(self.tables).T
-        df.columns = [f"Table {i}" for i in range(self.number_of_tables)]
+        df.columns = [f"Table {i+1}" for i in range(self.number_of_tables)]
 
         # replace player object with name and data
         def pretty(player):
@@ -202,7 +244,8 @@ class TournamentOrganizer:
         df.loc[len(df.index)] = table_badness
         df.loc[len(df.index)] = table_score
 
-        df.index = ["Player 1", "Player 2", "Player 3", "Player 4", "Table Badness", "Table Score"]
+        # df.index = ["Player 1", "Player 2", "Player 3", "Player 4", "Table Badness", "Table Score"]
+        df.index = [*[f"Player {i+1}" for i in range(max(self.table_layout))], "Table Badness", "Table Score"]
         return df
 
     def calc_badness_single_player(self, seated_players: list, possible_player: Player):
@@ -222,3 +265,11 @@ class TournamentOrganizer:
         best_player = possible_players[np.argmin(badness_list)]
 
         return best_player
+
+    def simulate_tournament(self):
+        for i in range(self.number_of_rounds):
+            self.calc_pairings()
+            self.set_results()
+            self.calc_standings()
+
+        self.calc_final_standings()
