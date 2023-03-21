@@ -7,7 +7,7 @@ from util import namify_player_list
 activate_ips_on_exception()
 
 ### ----- define some tournament parameters ----- ###
-number_of_players = 12
+number_of_players = 16
 
 ### --------------------------------------------- ###
 

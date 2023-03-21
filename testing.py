@@ -1,9 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from ipydex import IPS
+from ipydex import IPS, activate_ips_on_exception
 
 from tournament_organizer import TournamentOrganizer
 from player import Player
+
+activate_ips_on_exception()
 
 ### --- Parameters --- ###
 players_range = [8, 25]

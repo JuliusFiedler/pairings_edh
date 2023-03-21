@@ -1,7 +1,9 @@
 import numpy as np
+import pandas as pd
+import json
+
 from player import Player
 from util import *
-import pandas as pd
 
 
 class TournamentOrganizer:
@@ -10,6 +12,8 @@ class TournamentOrganizer:
         self.number_of_players = len(players)
 
         self.printing = printing
+        self.json_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), "json_dumps")
+        os.makedirs(self.json_path, exist_ok=True)
 
         # points
         self.p_win = 3
@@ -39,12 +43,14 @@ class TournamentOrganizer:
         self.standings = list(np.copy(self.players))
         np.random.shuffle(self.standings)
 
-        self.round = 1
+        self.round = 0
 
-        self.say_hello_to_players()
+        self.initialize_players()
+        self.results_dict = {"rounds": [], "players": [p.id for p in self.players]}
 
-    def say_hello_to_players(self):
-        for p in self.players:
+    def initialize_players(self):
+        for i, p in enumerate(self.players):
+            p.id = i + 1  # 0 is prohibited
             p.TO = self
 
     def calc_standings(self):
@@ -76,7 +82,7 @@ class TournamentOrganizer:
 
     def print_standings(self, show_tiebreakers=False):
         if self.printing:
-            print(yellow(f"\nStandings after Round {self.round -1}"))
+            print(yellow(f"\nStandings after Round {self.round}"))
             for i, p in enumerate(self.standings):
                 p: Player
                 player_stats = p.get_player_stats()
@@ -87,15 +93,16 @@ class TournamentOrganizer:
                     player_stats[-1] = bmagenta(player_stats[-1])
 
                 if show_tiebreakers:
-                    row_template = "{:<2} {:<15} Score {:<2}  OMWP: {:<6}  TSN: {:<2}  Badness Sum: {:<2}"
+                    row_template = "{:<2} {:<15} ID {:<2} Score {:<2}  OMWP: {:<6}  TSN: {:<2}  Badness Sum: {:<2}"
                 else:
-                    row_template = "{:<2} {:<15} Score {:<2}  Badness Sum: {:<2}"
-                    del player_stats[2:4]
+                    row_template = "{:<2} {:<15} ID {:<2} Score {:<2}  Badness Sum: {:<2}"
+                    del player_stats[3:5]
                 if i == 4 and show_tiebreakers:
                     print("--------------------------------")
                 print(row_template.format(i + 1, *player_stats))
 
     def calc_pairings(self, v=4):
+        self.round += 1
         self.tables = []
         # Variante 1
         # pair from top to bottom, first against next best 3 and so on (very basic)
@@ -156,7 +163,7 @@ class TournamentOrganizer:
                 np.random.shuffle(table)
                 self.tables.append(table)
         # Variante 4
-        # combination of 2 and 3: select first player from among thos with the highest score, but take the badest
+        # combination of 2 and 3: select first player from among those with the highest score, but take the badest
         elif v == 4:
             open_players = self.standings.copy()
             for n in self.table_layout:
@@ -213,6 +220,11 @@ class TournamentOrganizer:
 
         self.old_pairings.append(self.tables)
 
+        # json dump
+        self.pairing_dict = {"placements": [{"players": [player.id for player in table]} for table in self.tables]}
+        with open(os.path.join(self.json_path, f"Pairings_Round_{self.round}.json"), "w") as f:
+            json.dump(self.pairing_dict, f, indent=4)
+
     def evaluate_pairings(self):
         table_badness = np.zeros(self.number_of_tables)
         table_variances = np.zeros(self.number_of_tables)
@@ -228,41 +240,49 @@ class TournamentOrganizer:
         return J
 
     def set_results(self):
-        # turn up the round counter
-        self.round += 1
-        for p in self.players:
-            p: Player
-            p.rounds_palyed += 1
-
         # random results for testing
-        winners = []
-        drawers = []
+        current_round = []
         for t in self.tables:
             # draw
             if np.random.rand() > 0.8:
-                for p in t:
-                    p.score += self.p_draw
-                    drawers.append(p.name)
+                current_round.append({"players": [p.id for p in t], "winner": 0})
             # win
             else:
                 winner = np.random.choice(t)
-                winner.score += self.p_win
-                winners.append(winner.name)
-        # df = self.pairings_to_dataframe()
-        # def color_by_res(entry):
-        #     try:
-        #         if entry[0] in winners:
-        #             return bgreen(entry)
-        #         elif entry[0] in drawers:
-        #             return bblue(entry)
-        #         else:
-        #             return entry
-        #     except TypeError:
-        #         return entry
+                current_round.append({"players": [p.id for p in t], "winner": winner.id})
 
-        # df = df.applymap(color_by_res)
-        # if self.printing:
-        #     print(df)
+        self.results_dict["rounds"].append(current_round)
+
+        with open(os.path.join(self.json_path, f"Results_Round_{self.round}.json"), "w") as f:
+            json.dump(self.results_dict, f, indent=4)
+
+    def load_results(self, file_name):
+        # turn up the round counter
+        for p in self.players:
+            p: Player
+            p.rounds_played += 1
+        with open(os.path.join(self.json_path, file_name), "r") as f:
+            res = json.load(f)
+        # results of last round
+        for table in res["rounds"][-1]:
+            # sanity check
+            assert {"players": table["players"]} in self.pairing_dict[
+                "placements"
+            ], "Results table does not match pairing table!"
+            # draw
+            if table["winner"] == 0:
+                for player in table["players"]:
+                    self.get_player_by_id(player).score += self.p_draw
+            # win
+            else:
+                self.get_player_by_id(table["winner"]).score += self.p_win
+
+    def get_player_by_id(self, id):
+        # TODO: this can be done more efficient
+        for player in self.players:
+            if id == player.id:
+                return player
+        raise ValueError(f"ID {id} not found among players.")
 
     def pairings_to_dataframe(self):
         # compact visualization of the pairing tables
@@ -317,6 +337,7 @@ class TournamentOrganizer:
         for i in range(self.number_of_rounds):
             self.calc_pairings()
             self.set_results()
+            self.load_results(f"Results_Round_{i+1}.json")
             # skip standing after last round
             if i + 1 < self.number_of_rounds:
                 self.calc_standings()

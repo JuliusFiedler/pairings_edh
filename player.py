@@ -17,7 +17,8 @@ class Player:
         # high is good
         self.match_win_perc = 1 / 3
         self.opp_match_win_perc = 1 / 3
-        self.rounds_palyed = 0
+        self.rounds_played = 0
+        self.id = None  # this is the id used by the website to identify players. it is set by TournamentOrganizer
 
     def set_TO(self, TO):
         self.TO = TO
@@ -26,7 +27,7 @@ class Player:
         return self.score
 
     def get_player_stats(self):
-        return [self.name, self.score, round(self.get_OMWP(), 3), self.total_seating_number, self.badness_sum]
+        return [self.name, self.id, self.score, round(self.get_OMWP(), 3), self.total_seating_number, self.badness_sum]
 
     def add_opponents(self, ops):
         self.opponents.append(ops)
@@ -38,7 +39,7 @@ class Player:
         """personal Match Win Percentage
         MWP cannot be lower than 0.33, see https://www.mtgevent.com/blog/magic-the-gathering-tiebreakers-explained/
         """
-        self.match_win_perc = max(self.score / (self.rounds_palyed * self.TO.p_win), 1 / 3)
+        self.match_win_perc = max(self.score / (self.rounds_played * self.TO.p_win), 1 / 3)
         assert self.match_win_perc <= 1
         return self.match_win_perc
 
@@ -56,7 +57,7 @@ class Player:
             # average MW% at the table
             OMWP_sum += table_MW_sum / len(op_list)
 
-        self.opp_match_win_perc = OMWP_sum / self.rounds_palyed
+        self.opp_match_win_perc = OMWP_sum / self.rounds_played
 
         assert self.opp_match_win_perc <= 1
 
