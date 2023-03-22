@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import json
+import shutil
 from ipydex import IPS
 
 from player import Player
@@ -70,21 +71,6 @@ class TournamentOrganizer:
             p.TO = self
 
     def get_standings(self):
-        # sort players by points
-        self.standings = list(np.copy(self.players))
-        # we shuffle the standings before sorting to prevent registration order mattering
-        # TODO: this assumes, that during the swiss only scores matter, and no tiebreakers are used.
-        np.random.shuffle(self.standings)
-
-        def get_player_score(player: Player):
-            return player.get_score()
-
-        self.standings.sort(key=get_player_score, reverse=True)
-
-        # print result
-        self.print_standings()
-
-    def get_final_standings(self):
         def get_tiebreaker_score(player: Player):
             # 1. sort by score
             # 2. add first tiebreaker
@@ -95,6 +81,24 @@ class TournamentOrganizer:
         self.standings.sort(key=get_tiebreaker_score, reverse=True)
 
         self.print_standings(show_tiebreakers=True)
+
+        # json export
+        standing_dict = {
+            "header": ["#", "Name", "Score", "OMW%", "TSN"],
+            "header_description": [
+                "Place",
+                "Player Name",
+                f"Player Score ({self.p_win}/{self.p_draw}/0)",
+                "Opponents Match Win Percentage",
+                "Total Seating Number (high=harder=better)",
+            ],
+            "standings": {},
+        }
+        for i, p in enumerate(self.standings):
+            p: Player
+            standing_dict["standings"][i + 1] = [p.id, p.score, p.get_OMWP(), p.total_seating_number]
+        with open(os.path.join(self.json_path, f"Standings_after_Round_{self.round}.json"), "w") as f:
+            json.dump(standing_dict, f, indent=4)
 
     def print_standings(self, show_tiebreakers=False):
         if self.printing:
@@ -118,6 +122,18 @@ class TournamentOrganizer:
                 print(row_template.format(i + 1, *player_stats))
 
     def get_pairings(self, v=4):
+        # sort players by points
+        self.standings = list(np.copy(self.players))
+        # We shuffle the standings before sorting to prevent registration order mattering.
+        # This assumes, that during the swiss only scores matter, and no tiebreakers are used.
+        # Therefore we shuffle here after standings have been sorted and posted
+        np.random.shuffle(self.standings)
+
+        def get_player_score(player: Player):
+            return player.get_score()
+
+        self.standings.sort(key=get_player_score, reverse=True)
+
         self.round += 1
         self.tables = []
         # Variante 1
@@ -362,10 +378,8 @@ class TournamentOrganizer:
             self.set_random_results()
             self.load_results(f"Results_Round_{i+1}.json")
             # skip standing after last round
-            if i + 1 < self.number_of_rounds:
-                self.get_standings()
+            self.get_standings()
 
-        self.get_final_standings()
         s = 0
         for p in self.players:
             s += p.badness_sum
