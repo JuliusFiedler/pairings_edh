@@ -8,8 +8,13 @@ from util import *
 
 class TournamentOrganizer:
     def __init__(self, players, printing=True) -> None:
-        self.players = players
-        self.number_of_players = len(players)
+        # players
+        if isinstance(players, list):
+            assert all([isinstance(p, Player) for p in players])
+            self.players = players
+        elif isinstance(players, int):
+            self.players = [Player() for i in range(players)]
+        self.number_of_players = len(self.players)
 
         self.printing = printing
         self.json_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), "json_dumps")
@@ -53,7 +58,7 @@ class TournamentOrganizer:
             p.id = i + 1  # 0 is prohibited
             p.TO = self
 
-    def calc_standings(self):
+    def get_standings(self):
         # sort players by points
         self.standings = list(np.copy(self.players))
         # we shuffle the standings before sorting to prevent registration order mattering
@@ -68,7 +73,7 @@ class TournamentOrganizer:
         # print result
         self.print_standings()
 
-    def calc_final_standings(self):
+    def get_final_standings(self):
         def get_tiebreaker_score(player: Player):
             # 1. sort by score
             # 2. add first tiebreaker
@@ -101,7 +106,7 @@ class TournamentOrganizer:
                     print("--------------------------------")
                 print(row_template.format(i + 1, *player_stats))
 
-    def calc_pairings(self, v=4):
+    def get_pairings(self, v=4):
         self.round += 1
         self.tables = []
         # Variante 1
@@ -315,7 +320,7 @@ class TournamentOrganizer:
         df.index = [*[f"Player {i+1}" for i in range(max(self.table_layout))], "Table Badness", "Tab. Sc. Var."]
         return df
 
-    def calc_badness_single_player(self, seated_players: list, possible_player: Player):
+    def get_badness_single_player(self, seated_players: list, possible_player: Player):
         badness = 0
         for p in seated_players:
             badness += flatten(p.opponents).count(possible_player) ** 2
@@ -326,7 +331,7 @@ class TournamentOrganizer:
         # compare all open players w.r.t. their badness and select the best option
         badness_list = np.zeros_like(possible_players)
         for i, possible_player in enumerate(possible_players):
-            badness_list[i] = self.calc_badness_single_player(seated_players, possible_player)
+            badness_list[i] = self.get_badness_single_player(seated_players, possible_player)
 
         # argmin selects the first occurance if multiple occur, prioritizing the highest rated player
         best_player = possible_players[np.argmin(badness_list)]
@@ -335,14 +340,14 @@ class TournamentOrganizer:
 
     def simulate_tournament(self):
         for i in range(self.number_of_rounds):
-            self.calc_pairings()
+            self.get_pairings()
             self.set_results()
             self.load_results(f"Results_Round_{i+1}.json")
             # skip standing after last round
             if i + 1 < self.number_of_rounds:
-                self.calc_standings()
+                self.get_standings()
 
-        self.calc_final_standings()
+        self.get_final_standings()
         s = 0
         for p in self.players:
             s += p.badness_sum
