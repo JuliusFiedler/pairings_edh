@@ -9,8 +9,8 @@ Input and output are serialized json objects.
 
 - Use `config.json` to specify a path, where the following files will be expected.
 - To start a new tournaments call `python script.py --new <number_of_players>`. This will generate a file `Pairings_Round_1.json`.
-- The results have to provided in the form of `Results_Round_<n>.json`
-- To progress to the next round, call `python script.py --next <path_to_results.json>`. This will generate two files:
+<!-- - The results have to provided in the form of `Results_Round_<n>.json` -->
+- To progress to the next round, call `python script.py --next <path_to_results.json>`, specifying the path to the results. This will generate two files:
     - A file containing the pairings for the next round `Pairings_Round_<n+1>.json`
     - **NEW** A file containing the standings of the current round, `Standings_after_Round_<n>.json`, which looks like this:
         ````json
@@ -128,12 +128,6 @@ did see a single other player twice in a single round, all other pairings were w
 - Validate pairing system, badness, etc.
 - Build unittest?
 - implement user interface (names, results) see https://urs-kober.de/p/cedh_matching/
-- Players dropping
-    - this is difficult since reconstructing the history is dependent on number of players, which might change every single round
-
-### Prblems
-- sometimes very high badness still occurs with variante 2, (eg. 12 palyers, seed 19)
-
 
 ## Contributing
 If you submit code, please note that this project uses automatic code formatting with the tool [black](https://github.com/psf/black), more precisely: `black -l 120 .`.
