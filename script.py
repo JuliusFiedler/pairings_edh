@@ -15,7 +15,9 @@ argparser = argparse.ArgumentParser()
 argparser.add_argument("--new", help="start new tournament with given number of players", metavar="player_number")
 argparser.add_argument("--next", help="specify results path and calculate next rounds pairings", metavar="path")
 # for testing
-argparser.add_argument("--random_res", help="set this flag to immeadiately add random results", action="store_true")
+argparser.add_argument(
+    "-rr", "--random_res", help="set this (additional) flag to immeadiately add random results", action="store_true"
+)
 
 args = argparser.parse_args()
 
@@ -37,6 +39,8 @@ def new(player_number, random_res=False):
     shutil.rmtree("json_dumps", ignore_errors=True)
     TO = TournamentOrganizer(player_number)
     TO.get_pairings()
+
+    # debug only
     if random_res:
         TO.set_random_results()
         TO.process_results(TO.results_dict["rounds"][-1])
@@ -48,11 +52,10 @@ def next(path, random_res=False):
         res = json.load(f)
     # check for dropped players
     original_player_ids = []
-    for round_ in res["rounds"]:
-        for table in round_:
-            for id in table["players"]:
-                if not id in original_player_ids:
-                    original_player_ids.append(id)
+    for table in res["rounds"][0]:
+        for id in table["players"]:
+            if not id in original_player_ids:
+                original_player_ids.append(id)
     current_player_ids = res["players"]
     dropped_player_ids = list(set(original_player_ids) - set(current_player_ids))
 
@@ -70,6 +73,7 @@ def next(path, random_res=False):
     TO.get_standings()
     TO.get_pairings()
 
+    # debug only
     if random_res:
         TO.results_dict = res
         TO.set_random_results()

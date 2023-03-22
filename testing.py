@@ -21,7 +21,7 @@ for number_of_players in range(*players_range, 1):
     for i in range(runs_per_player_number):
         players = [Player(id=i + 1) for i in range(number_of_players)]
 
-        TO = TournamentOrganizer(players, printing=False)
+        TO = TournamentOrganizer(players, printing=False, seed=i)
         TO.simulate_tournament()
 
         # average pairing badness per player

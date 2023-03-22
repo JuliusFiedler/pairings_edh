@@ -89,6 +89,7 @@ Input and output are serialized json objects.
 ### Testing
 - Run `main.py` to test a tournament, inspect pairings and standings
 - Run `testing.py` for large scale testing (various player numbers, many random results)
+- Run `python script.py --new <number_of_players>` and manually create the results file or add the `--random_res` flag for random results. Continue by running `python script.py --next <path_to_results.json> [--random_res]` to progress the tournament.
 
 ## Philosophy
 - Use as many elements off the classical swiss pairing system as possible
@@ -128,6 +129,9 @@ did see a single other player twice in a single round, all other pairings were w
 - Validate pairing system, badness, etc.
 - Build unittest?
 - implement user interface (names, results) see https://urs-kober.de/p/cedh_matching/
+
+## Wishlist
+- UI button to set / randomize seed in config
 
 ## Contributing
 If you submit code, please note that this project uses automatic code formatting with the tool [black](https://github.com/psf/black), more precisely: `black -l 120 .`.

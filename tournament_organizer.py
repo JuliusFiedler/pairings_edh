@@ -9,9 +9,21 @@ from util import *
 
 
 class TournamentOrganizer:
-    def __init__(self, players, printing=True) -> None:
+    def __init__(self, players, printing=None, seed=None):
+        # load config file
         with open("config.json", "r") as f:
             config = json.load(f)
+        if printing is None:
+            self.printing = config["console_printing"] == "True"
+        else:
+            self.printing = printing
+        if seed is None:
+            self.seed = config["seed"]
+        else:
+            self.seed = seed
+        self.pairing_variant = config["pairing_variant"]
+        self.seating_variant = config["seating_variant"]
+
         # players
         if isinstance(players, list):
             # list of players
@@ -29,8 +41,9 @@ class TournamentOrganizer:
             raise TypeError("players is of wrong type.")
 
         self.number_of_players = len(self.players)
+        assert self.number_of_players > 5, "too few players, tournament is canceled"
 
-        self.printing = printing
+        # setup json dir
         self.json_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), config["relative_json_path"])
         os.makedirs(self.json_path, exist_ok=True)
 
@@ -42,23 +55,11 @@ class TournamentOrganizer:
         self.weight_badness = 1
         self.weight_variance = 1
 
-        # players
-        assert self.number_of_players > 5, "too few players, tournament is canceled"
-
         # rounds and tables:
-        self.number_of_rounds = int(np.ceil(np.log2(self.number_of_players)))
-        self.number_of_tables = int(np.ceil(self.number_of_players / 4))
-        """
-        players = x*4 + y*3
-        tables = x + y
-        """
-        n4 = int(self.number_of_players - 3 * self.number_of_tables)
-        n3 = int(self.number_of_tables - n4)
-
-        self.table_layout = np.array(np.hstack((4 * np.ones(n4), 3 * np.ones(n3))), dtype=int)
-        self.old_pairings = []
+        self.setup_tables()
 
         # get initial (random) standings
+        np.random.seed(self.seed)
         self.standings = list(np.copy(self.players))
         np.random.shuffle(self.standings)
 
@@ -74,8 +75,12 @@ class TournamentOrganizer:
             player = self.get_player_by_id(id)
             self.players.remove(player)
             self.standings.remove(player)
+        # reevaluate table setup with fewer players
+        self.setup_tables()
 
-        self.number_of_players = len(self.players)
+    def setup_tables(self):
+        """calculate appropriate table layout for given number of players"""
+        self.number_of_rounds = int(np.ceil(np.log2(self.number_of_players)))
         self.number_of_tables = int(np.ceil(self.number_of_players / 4))
         """
         players = x*4 + y*3
@@ -84,14 +89,18 @@ class TournamentOrganizer:
         n4 = int(self.number_of_players - 3 * self.number_of_tables)
         n3 = int(self.number_of_tables - n4)
 
+        assert n4 * 4 + n3 * 3 == self.number_of_players, "Math doesnt check out."
+
         self.table_layout = np.array(np.hstack((4 * np.ones(n4), 3 * np.ones(n3))), dtype=int)
 
     def initialize_players(self):
         for i, p in enumerate(self.players):
-            p.id = i + 1  # 0 is prohibited
             p.TO = self
 
     def get_standings(self):
+        """calculate standings using the tiebreaker system: score, OMW%, TSN
+        Also dump standing to json file"""
+
         def get_tiebreaker_score(player: Player):
             # 1. sort by score
             # 2. add first tiebreaker
@@ -101,7 +110,7 @@ class TournamentOrganizer:
 
         self.standings.sort(key=get_tiebreaker_score, reverse=True)
 
-        self.print_standings(show_tiebreakers=True)
+        self.print_standings()
 
         # json export
         standing_dict = {
@@ -121,7 +130,8 @@ class TournamentOrganizer:
         with open(os.path.join(self.json_path, f"Standings_after_Round_{self.round}.json"), "w") as f:
             json.dump(standing_dict, f, indent=4)
 
-    def print_standings(self, show_tiebreakers=False):
+    def print_standings(self):
+        """print standings in console"""
         if self.printing:
             print(yellow(f"\nStandings after Round {self.round}"))
             for i, p in enumerate(self.standings):
@@ -133,16 +143,14 @@ class TournamentOrganizer:
                 elif player_stats[-1] >= 5:
                     player_stats[-1] = bmagenta(player_stats[-1])
 
-                if show_tiebreakers:
-                    row_template = "{:<2} {:<15} ID {:<2} Score {:<2}  OMWP: {:<6}  TSN: {:<2}  Badness Sum: {:<2}"
-                else:
-                    row_template = "{:<2} {:<15} ID {:<2} Score {:<2}  Badness Sum: {:<2}"
-                    del player_stats[3:5]
-                if i == 4 and show_tiebreakers:
+                row_template = "{:<2} {:<15} ID {:<2} Score {:<2}  OMWP: {:<6}  TSN: {:<2}  Badness Sum: {:<2}"
+
+                if i == 4:
                     print("--------------------------------")
                 print(row_template.format(i + 1, *player_stats))
 
-    def get_pairings(self, v=4):
+    def get_pairings(self):
+        """generate pairings using the selected method. Dump pairings to json file"""
         # sort players by points
         self.standings = list(np.copy(self.players))
         # We shuffle the standings before sorting to prevent registration order mattering.
@@ -159,7 +167,7 @@ class TournamentOrganizer:
         self.tables = []
         # Variante 1
         # pair from top to bottom, first against next best 3 and so on (very basic)
-        if v == 1:
+        if self.pairing_variant == 1:
             index = 0
             for n in self.table_layout:
                 self.tables.append(self.standings[index : index + n])
@@ -168,7 +176,7 @@ class TournamentOrganizer:
         # Variante 2
         # pair from the top, but select the player with the least badness for the next open spot
         # on the table
-        elif v == 2:
+        elif self.pairing_variant == 2:
             open_players = self.standings.copy()
             for n in self.table_layout:
                 table = []
@@ -190,7 +198,7 @@ class TournamentOrganizer:
         # Variante 3
         # start pairing with the person with the highest badness sum so far and minimize
         # their badness
-        elif v == 3:
+        elif self.pairing_variant == 3:
             open_players = self.standings.copy()
             for n in self.table_layout:
                 table = []
@@ -217,7 +225,7 @@ class TournamentOrganizer:
                 self.tables.append(table)
         # Variante 4
         # combination of 2 and 3: select first player from among those with the highest score, but take the worst
-        elif v == 4:
+        elif self.pairing_variant == 4:
             open_players = self.standings.copy()
             for n in self.table_layout:
                 table = []
@@ -248,8 +256,6 @@ class TournamentOrganizer:
 
         self.track_opponents()
 
-        self.old_pairings.append(self.tables)
-
         # print result
         if self.printing:
             print(yellow(f"\nPairings for Round {self.round}"))
@@ -261,6 +267,7 @@ class TournamentOrganizer:
             json.dump(self.pairing_dict, f, indent=4)
 
     def track_opponents(self):
+        """Track who played against whom and their seating position."""
         # calc player badness and track player seatings
         for i, t in enumerate(self.tables):
             for pos, p in enumerate(t):
@@ -271,7 +278,7 @@ class TournamentOrganizer:
                 p.current_badness = badness
                 p.badness_sum += badness
 
-                p.total_seating_number += pos + 1  # +1 in order to have positions 1 to 4 for the plebs
+                p.total_seating_number += self.get_seating_number(pos, t)
                 # TODO is this only relevant if you win?
                 # TODO Meaning does your player seating only count if you won from that position?
 
@@ -282,7 +289,22 @@ class TournamentOrganizer:
                 ops.remove(p)
                 p.add_opponents(ops)
 
+    def get_seating_number(self, pos, table):
+        if self.seating_variant == 1:
+            return pos + 1  # +1 in order to have positions 1 to 4 for the plebs
+        elif self.seating_variant == 2:
+            if pos == 0:
+                sn = 1
+            elif pos < len(table) - 1:
+                sn = 2
+            elif pos == len(table):
+                sn = 3
+            else:
+                raise ValueError(f"position {pos} at a table of {len(table)} does not work.")
+            return sn
+
     def evaluate_pairings(self):
+        # TODO remove this?
         table_badness = np.zeros(self.number_of_tables)
         table_variances = np.zeros(self.number_of_tables)
         for i, t in enumerate(self.tables):
@@ -297,6 +319,7 @@ class TournamentOrganizer:
         return J
 
     def set_random_results(self):
+        """randomly produce results and dump them to json file"""
         # random results for testing
         current_round = []
         for t in self.tables:
@@ -314,11 +337,13 @@ class TournamentOrganizer:
             json.dump(self.results_dict, f, indent=4)
 
     def load_results(self, file_name):
+        """load results.json and process the contents"""
         with open(os.path.join(self.json_path, file_name), "r") as f:
             res = json.load(f)
         self.process_results(res["rounds"][-1])
 
     def process_results(self, current_round):
+        """add points to winners and drawer of current round"""
         # turn up the round counter
         for p in self.players:
             p: Player
@@ -345,6 +370,7 @@ class TournamentOrganizer:
         raise ValueError(f"ID {id} not found among players.")
 
     def pairings_to_dataframe(self):
+        """visualize pairings in dataframe for console printout"""
         # compact visualization of the pairing tables
         df = pd.DataFrame(self.tables).T
         df.columns = [f"Table {i+1}" for i in range(self.number_of_tables)]

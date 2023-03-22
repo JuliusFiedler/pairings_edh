@@ -59,6 +59,6 @@ class Player:
 
         self.opp_match_win_perc = OMWP_sum / self.rounds_played
 
-        assert self.opp_match_win_perc <= 1
+        assert self.opp_match_win_perc <= 1, f"OMWperc is out of bounds: {self.opp_match_win_perc}"
 
         return self.opp_match_win_perc

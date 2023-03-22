@@ -1,3 +1,7 @@
 {
-    "relative_json_path": "json_dumps"
+    "relative_json_path": "json_dumps",
+    "seed": 19,
+    "console_printing": "True",
+    "seating_variant": 1,
+    "pairing_variant": 4
 }
