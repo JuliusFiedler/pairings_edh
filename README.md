@@ -7,6 +7,7 @@
 This project invokes the cedh tournament protocal as presented [here](https://github.com/RememberOfLife/cedh_matching).
 Input and output are serialized json objects.
 
+- Use `config.json` to specify a path, where the following files will be expected.
 - To start a new tournaments call `python script.py --new <number_of_players>`. This will generate a file `Pairings_Round_1.json`.
 - The results have to provided in the form of `Results_Round_<n>.json`
 - To progress to the next round, call `python script.py --next <path_to_results.json>`. This will generate two files:
@@ -127,7 +128,8 @@ did see a single other player twice in a single round, all other pairings were w
 - Validate pairing system, badness, etc.
 - Build unittest?
 - implement user interface (names, results) see https://urs-kober.de/p/cedh_matching/
-- test Players dropping
+- Players dropping
+    - this is difficult since reconstructing the history is dependent on number of players, which might change every single round
 
 ### Prblems
 - sometimes very high badness still occurs with variante 2, (eg. 12 palyers, seed 19)

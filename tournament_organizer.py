@@ -10,6 +10,8 @@ from util import *
 
 class TournamentOrganizer:
     def __init__(self, players, printing=True) -> None:
+        with open("config.json", "r") as f:
+            config = json.load(f)
         # players
         if isinstance(players, list):
             # list of players
@@ -29,7 +31,7 @@ class TournamentOrganizer:
         self.number_of_players = len(self.players)
 
         self.printing = printing
-        self.json_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), "json_dumps")
+        self.json_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), config["relative_json_path"])
         os.makedirs(self.json_path, exist_ok=True)
 
         # points
@@ -64,6 +66,25 @@ class TournamentOrganizer:
 
         self.initialize_players()
         self.results_dict = {"rounds": [], "players": [p.id for p in self.players]}
+
+    def drop_players(self, players_ids):
+        if isinstance(players_ids, int):
+            players_ids = [players_ids]
+        for id in players_ids:
+            player = self.get_player_by_id(id)
+            self.players.remove(player)
+            self.standings.remove(player)
+
+        self.number_of_players = len(self.players)
+        self.number_of_tables = int(np.ceil(self.number_of_players / 4))
+        """
+        players = x*4 + y*3
+        tables = x + y
+        """
+        n4 = int(self.number_of_players - 3 * self.number_of_tables)
+        n3 = int(self.number_of_tables - n4)
+
+        self.table_layout = np.array(np.hstack((4 * np.ones(n4), 3 * np.ones(n3))), dtype=int)
 
     def initialize_players(self):
         for i, p in enumerate(self.players):
@@ -376,7 +397,7 @@ class TournamentOrganizer:
         for i in range(self.number_of_rounds):
             self.get_pairings()
             self.set_random_results()
-            self.load_results(f"Results_Round_{i+1}.json")
+            self.load_results(f"Results_Round_{self.round}.json")
             # skip standing after last round
             self.get_standings()
 

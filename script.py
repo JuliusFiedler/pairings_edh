@@ -46,13 +46,27 @@ def new(player_number, random_res=False):
 def next(path, random_res=False):
     with open(path, "r") as f:
         res = json.load(f)
-    TO = TournamentOrganizer(res["players"])
+    # check for dropped players
+    original_player_ids = []
+    for round_ in res["rounds"]:
+        for table in round_:
+            for id in table["players"]:
+                if not id in original_player_ids:
+                    original_player_ids.append(id)
+    current_player_ids = res["players"]
+    dropped_player_ids = list(set(original_player_ids) - set(current_player_ids))
+
+    # recretate tournament history
+    TO = TournamentOrganizer(original_player_ids)
     for current_round in res["rounds"]:
         TO.round += 1
         TO.tables = [[TO.get_player_by_id(i) for i in table["players"]] for table in current_round]
         TO.pairing_dict = res
         TO.track_opponents()
         TO.process_results(current_round)
+
+    # get new pairings
+    TO.drop_players(dropped_player_ids)
     TO.get_standings()
     TO.get_pairings()
 
