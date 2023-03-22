@@ -13,7 +13,7 @@ number_of_players = 16
 
 np.random.seed(19)  # for reproducibility
 
-players = [Player() for i in range(number_of_players)]
+players = [Player(id=i + 1) for i in range(number_of_players)]
 
 TO = TournamentOrganizer(players)
 

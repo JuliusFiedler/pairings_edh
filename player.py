@@ -3,7 +3,8 @@ import names
 
 
 class Player:
-    def __init__(self, name=None) -> None:
+    def __init__(self, id, name=None) -> None:
+        self.id = id  # this is the id used by the website to identify players. it is set by TournamentOrganizer
         if name is None:
             self.name = names.get_first_name()
         else:
@@ -18,7 +19,6 @@ class Player:
         self.match_win_perc = 1 / 3
         self.opp_match_win_perc = 1 / 3
         self.rounds_played = 0
-        self.id = None  # this is the id used by the website to identify players. it is set by TournamentOrganizer
 
     def set_TO(self, TO):
         self.TO = TO

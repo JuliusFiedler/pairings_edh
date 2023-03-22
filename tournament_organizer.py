@@ -10,10 +10,20 @@ class TournamentOrganizer:
     def __init__(self, players, printing=True) -> None:
         # players
         if isinstance(players, list):
-            assert all([isinstance(p, Player) for p in players])
-            self.players = players
+            # list of players
+            if all([isinstance(p, Player) for p in players]):
+                self.players = players
+            # list of player ids
+            elif all([isinstance(p, int) for p in players]):
+                self.players = [Player(id=i) for i in players]
+            else:
+                raise TypeError("players is of wrong type.")
         elif isinstance(players, int):
-            self.players = [Player() for i in range(players)]
+            # playernumber given
+            self.players = [Player(id=i + 1) for i in range(players)]
+        else:
+            raise TypeError("players is of wrong type.")
+
         self.number_of_players = len(self.players)
 
         self.printing = printing

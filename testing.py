@@ -19,7 +19,7 @@ for number_of_players in range(*players_range, 1):
     number_badly_paired_player_sum = 0
     number_really_badly_paired_player_sum = 0
     for i in range(runs_per_player_number):
-        players = [Player() for i in range(number_of_players)]
+        players = [Player(id=i + 1) for i in range(number_of_players)]
 
         TO = TournamentOrganizer(players, printing=False)
         TO.simulate_tournament()
