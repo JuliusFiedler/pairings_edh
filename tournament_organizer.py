@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import json
+from ipydex import IPS
 
 from player import Player
 from util import *
@@ -208,6 +209,21 @@ class TournamentOrganizer:
                 np.random.shuffle(table)
                 self.tables.append(table)
 
+        self.track_opponents()
+
+        self.old_pairings.append(self.tables)
+
+        # print result
+        if self.printing:
+            print(yellow(f"\nPairings for Round {self.round}"))
+            print(self.pairings_to_dataframe())
+
+        # json dump
+        self.pairing_dict = {"placements": [{"players": [player.id for player in table]} for table in self.tables]}
+        with open(os.path.join(self.json_path, f"Pairings_Round_{self.round}.json"), "w") as f:
+            json.dump(self.pairing_dict, f, indent=4)
+
+    def track_opponents(self):
         # calc player badness and track player seatings
         for i, t in enumerate(self.tables):
             for pos, p in enumerate(t):
@@ -220,11 +236,7 @@ class TournamentOrganizer:
 
                 p.total_seating_number += pos + 1  # +1 in order to have positions 1 to 4 for the plebs
                 # TODO is this only relevant if you win?
-
-        # print result
-        if self.printing:
-            print(yellow(f"\nPairings for Round {self.round}"))
-            print(self.pairings_to_dataframe())
+                # TODO Meaning does your player seating only count if you won from that position?
 
         # safe opponents of players
         for t in self.tables:
@@ -232,13 +244,6 @@ class TournamentOrganizer:
                 ops = t.copy()
                 ops.remove(p)
                 p.add_opponents(ops)
-
-        self.old_pairings.append(self.tables)
-
-        # json dump
-        self.pairing_dict = {"placements": [{"players": [player.id for player in table]} for table in self.tables]}
-        with open(os.path.join(self.json_path, f"Pairings_Round_{self.round}.json"), "w") as f:
-            json.dump(self.pairing_dict, f, indent=4)
 
     def evaluate_pairings(self):
         table_badness = np.zeros(self.number_of_tables)
@@ -254,7 +259,7 @@ class TournamentOrganizer:
 
         return J
 
-    def set_results(self):
+    def set_random_results(self):
         # random results for testing
         current_round = []
         for t in self.tables:
@@ -272,18 +277,21 @@ class TournamentOrganizer:
             json.dump(self.results_dict, f, indent=4)
 
     def load_results(self, file_name):
+        with open(os.path.join(self.json_path, file_name), "r") as f:
+            res = json.load(f)
+        self.process_results(res["rounds"][-1])
+
+    def process_results(self, current_round):
         # turn up the round counter
         for p in self.players:
             p: Player
             p.rounds_played += 1
-        with open(os.path.join(self.json_path, file_name), "r") as f:
-            res = json.load(f)
         # results of last round
-        for table in res["rounds"][-1]:
+        for table in current_round:
             # sanity check
-            assert {"players": table["players"]} in self.pairing_dict[
-                "placements"
-            ], "Results table does not match pairing table!"
+            # assert {"players": table["players"]} in self.pairing_dict[
+            #     "placements"
+            # ], "Results table does not match pairing table!"
             # draw
             if table["winner"] == 0:
                 for player in table["players"]:
@@ -307,7 +315,7 @@ class TournamentOrganizer:
         # replace player object with name and data
         def pretty(player):
             if player is not None:
-                return [player.name, player.score, player.current_badness]
+                return [player.id, player.name, player.score, player.current_badness]
             else:
                 return player
 
@@ -351,7 +359,7 @@ class TournamentOrganizer:
     def simulate_tournament(self):
         for i in range(self.number_of_rounds):
             self.get_pairings()
-            self.set_results()
+            self.set_random_results()
             self.load_results(f"Results_Round_{i+1}.json")
             # skip standing after last round
             if i + 1 < self.number_of_rounds:
