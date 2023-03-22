@@ -161,11 +161,11 @@ class TournamentOrganizer:
                 for i in range(n):
                     # table is empty, take player with highest badness so far
                     if len(table) == 0:
-                        badest_badness = 0
+                        worst_badness = 0
                         selected_player = open_players[0]
                         for p in open_players:
-                            if p.badness_sum > badest_badness:
-                                badest_badness = p.badness_sum
+                            if p.badness_sum > worst_badness:
+                                worst_badness = p.badness_sum
                                 selected_player = p
                         table.append(selected_player)
                         open_players.remove(selected_player)
@@ -179,7 +179,7 @@ class TournamentOrganizer:
                 np.random.shuffle(table)
                 self.tables.append(table)
         # Variante 4
-        # combination of 2 and 3: select first player from among those with the highest score, but take the badest
+        # combination of 2 and 3: select first player from among those with the highest score, but take the worst
         elif v == 4:
             open_players = self.standings.copy()
             for n in self.table_layout:
@@ -189,11 +189,11 @@ class TournamentOrganizer:
                     # empty table: look for hight score players, take the one with highest badness
                     if len(table) == 0:
                         best_score = open_players[0].get_score()
-                        badest_badness = 0
+                        worst_badness = 0
                         selected_player = open_players[0]
                         for p in open_players:
-                            if p.get_score() == best_score and p.badness_sum > badest_badness:
-                                badest_badness = p.badness_sum
+                            if p.get_score() == best_score and p.badness_sum > worst_badness:
+                                worst_badness = p.badness_sum
                                 selected_player = p
                             elif p.get_score() < best_score:
                                 break
