@@ -127,8 +127,8 @@ class TournamentOrganizer:
         for i, p in enumerate(self.standings):
             p: Player
             standing_dict["standings"][i + 1] = [p.id, p.score, p.get_OMWP(), p.total_seating_number]
-        with open(os.path.join(self.json_path, f"Standings_after_Round_{self.round}.json"), "w") as f:
-            json.dump(standing_dict, f, indent=4)
+        # with open(os.path.join(self.json_path, f"Standings_after_Round_{self.round}.json"), "w") as f:
+        #     json.dump(standing_dict, f, indent=4)
 
     def print_standings(self):
         """print standings in console"""
@@ -263,8 +263,9 @@ class TournamentOrganizer:
 
         # json dump
         self.pairing_dict = {"placements": [{"players": [player.id for player in table]} for table in self.tables]}
-        with open(os.path.join(self.json_path, f"Pairings_Round_{self.round}.json"), "w") as f:
-            json.dump(self.pairing_dict, f, indent=4)
+        print(self.pairing_dict)
+        # with open(os.path.join(self.json_path, f"Pairings_Round_{self.round}.json"), "w") as f:
+        #     json.dump(self.pairing_dict, f, indent=4)
 
     def track_opponents(self):
         """Track who played against whom and their seating position."""
