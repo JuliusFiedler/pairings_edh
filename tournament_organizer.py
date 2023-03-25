@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 import pandas as pd
 import json
@@ -263,7 +264,7 @@ class TournamentOrganizer:
 
         # json dump
         self.pairing_dict = {"placements": [{"players": [player.id for player in table]} for table in self.tables]}
-        print(self.pairing_dict)
+        json.dump(self.pairing_dict, sys.stdout)
         # with open(os.path.join(self.json_path, f"Pairings_Round_{self.round}.json"), "w") as f:
         #     json.dump(self.pairing_dict, f, indent=4)
 
