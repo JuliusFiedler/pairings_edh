@@ -14,7 +14,7 @@ activate_ips_on_exception()
 argparser = argparse.ArgumentParser()
 
 argparser.add_argument(
-    "--next", help="read previous results from file and print pairings to stdout in json format", metavar="path"
+    "--next", help="read previous results from STDIN and print pairings to STDOUT in json format", action="store_true"
 )
 # for testing
 argparser.add_argument(
@@ -26,9 +26,8 @@ args = argparser.parse_args()
 
 def main():
     if args.next:
-        path = args.next
         random_res = args.random_res
-        next(path, random_res)
+        next(random_res)
     else:
         argparser.print_help()
 
@@ -45,14 +44,14 @@ def new(player_number, random_res=False):
         TO.get_standings()
 
 
-def next(path, random_res=False):
+def next(random_res=False):
     # read from file
-    with open(path, "r") as f:
-        res = json.load(f)
+    # with open(path, "r") as f:
+    #     res = json.load(f)
 
     # read from stdin
-    # for line in sys.stdin:
-    #     res = json.loads(line)
+    for line in sys.stdin:
+        res = json.loads(line)
 
     # first round
     if len(res["rounds"]) == 0:
