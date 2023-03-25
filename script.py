@@ -50,8 +50,10 @@ def next(random_res=False):
     #     res = json.load(f)
 
     # read from stdin
+    string = ""
     for line in sys.stdin:
-        res = json.loads(line)
+        string += line
+    res = json.loads(string)
 
     # first round
     if len(res["rounds"]) == 0:
