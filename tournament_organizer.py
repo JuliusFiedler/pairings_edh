@@ -41,9 +41,6 @@ class TournamentOrganizer:
         else:
             raise TypeError("players is of wrong type.")
 
-        self.number_of_players = len(self.players)
-        assert self.number_of_players > 5, "too few players, tournament is canceled"
-
         # setup json dir
         self.json_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), config["relative_json_path"])
         os.makedirs(self.json_path, exist_ok=True)
@@ -81,6 +78,7 @@ class TournamentOrganizer:
 
     def setup_tables(self):
         """calculate appropriate table layout for given number of players"""
+        self.number_of_players = len(self.players)
         self.number_of_rounds = int(np.ceil(np.log2(self.number_of_players)))
         self.number_of_tables = int(np.ceil(self.number_of_players / 4))
         """
